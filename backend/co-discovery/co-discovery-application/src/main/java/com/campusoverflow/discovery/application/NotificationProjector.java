@@ -14,7 +14,6 @@ import com.campusoverflow.qa.api.event.AnswerSubmittedEvent;
 import com.campusoverflow.qa.api.event.CommentPostedEvent;
 import com.campusoverflow.reputation.api.event.BadgeAwardedEvent;
 import com.campusoverflow.reputation.api.event.BountyAwardedEvent;
-import java.util.Optional;
 import java.util.Set;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

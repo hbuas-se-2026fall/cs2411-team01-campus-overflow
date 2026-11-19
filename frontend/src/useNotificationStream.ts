@@ -16,14 +16,16 @@ const TOAST_TTL_MS = 6_000;
 export function useNotificationStream(me: Me | null) {
   const [unread, setUnread] = useState(0);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [lastMe, setLastMe] = useState<Me | null>(me);
+
+  // 身份变化时在渲染期重置未读数与提醒，避免在 effect 中同步 setState
+  if (lastMe !== me) {
+    setLastMe(me);
+    setUnread(0);
+    setToasts([]);
+  }
 
   useEffect(() => {
-    if (!me) {
-      setUnread(0);
-      setToasts([]);
-      return;
-    }
-
     let source: EventSource | null = null;
     let pollTimer: number | undefined;
     let disposed = false;
