@@ -23,19 +23,23 @@ jobs:
 
       # 阶段 1：编译（模块依赖不成环由 Maven 保证）
       - name: 编译
-        run: mvn -B -f backend/pom.xml clean compile
+        working-directory: backend
+        run: mvn -B clean compile
 
       # 阶段 2：单元测试（领域层 + 应用层，毫秒级，无外部依赖）
       - name: 单元测试
-        run: mvn -B -f backend/pom.xml test
+        working-directory: backend
+        run: mvn -B test
 
       # 阶段 3：架构适应度函数（ArchUnit：FF-1~FF-6）。-am 让上游模块一起进入反应堆，否则依赖无法解析
       - name: 架构约束检查
-        run: mvn -B -f backend/pom.xml test -pl co-bootstrap -am -Dtest=ArchitectureTest -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
+        working-directory: backend
+        run: mvn -B test -pl co-bootstrap -am -Dtest=ArchitectureTest -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
 
       # 阶段 4：领域层覆盖率门禁（低于阈值直接失败）
       - name: 覆盖率门禁
-        run: mvn -B -f backend/pom.xml verify -DskipITs -Djacoco.skip=false
+        working-directory: backend
+        run: mvn -B verify -DskipITs -Djacoco.skip=false
 
       # 阶段 5：集成测试（Testcontainers 拉起真实 MySQL + Redis）
       # 运行器上的 Docker Engine 29 把最小 API 提到 1.44，而 Testcontainers 1.20 客户端固定发 1.32，
@@ -47,7 +51,8 @@ jobs:
           sleep 5
           docker version
       - name: 集成测试
-        run: mvn -B -f backend/pom.xml verify -Dsurefire.skip=true
+        working-directory: backend
+        run: mvn -B verify -Dsurefire.skip=true
 
       - name: 归档测试报告
         if: always()

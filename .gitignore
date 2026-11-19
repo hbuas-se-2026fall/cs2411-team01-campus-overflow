@@ -8,3 +8,5 @@ dist/
 .DS_Store
 .env
 *.tsbuildinfo
+# 平台相关的可选原生依赖（rollup 等）需在 CI/Linux 上重新解析，不提交 Windows 生成的锁文件
+frontend/package-lock.json
