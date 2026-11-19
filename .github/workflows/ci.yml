@@ -38,6 +38,14 @@ jobs:
         run: mvn -B -f backend/pom.xml verify -DskipITs -Djacoco.skip=false
 
       # 阶段 5：集成测试（Testcontainers 拉起真实 MySQL + Redis）
+      # 运行器上的 Docker Engine 29 把最小 API 提到 1.44，而 Testcontainers 1.20 客户端固定发 1.32，
+      # 因此先把 daemon 的最小版本放宽到 1.32，避免 “client version 1.32 is too old”。
+      - name: 放宽 Docker 最小 API 版本
+        run: |
+          echo '{"min-api-version":"1.32"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          sleep 5
+          docker version
       - name: 集成测试
         run: mvn -B -f backend/pom.xml verify -Dsurefire.skip=true
 
