@@ -6,6 +6,7 @@ import com.campusoverflow.qa.application.port.ContentRenderer;
 import com.campusoverflow.qa.application.port.QaReadModel;
 import com.campusoverflow.qa.application.port.QuestionListCache;
 import com.campusoverflow.qa.application.port.ViewCounter;
+import com.campusoverflow.qa.domain.TargetType;
 import com.campusoverflow.shared.domain.NotFoundException;
 import com.campusoverflow.shared.page.PageRequest;
 import com.campusoverflow.shared.page.PageResult;
@@ -44,17 +45,116 @@ public class QuestionQueryService {
     }
 
     public PageResult<QuestionSummaryView> list(Long courseId, PageRequest page) {
-        // TODO(S2)：实现 QuestionQueryService.list——参考领域单元测试与 arc42 文档中的业务规则
-        throw new UnsupportedOperationException("TODO(S2)：QuestionQueryService.list 尚未实现");
+        return cache.get(courseId, page).orElseGet(() -> {
+            PageResult<QuestionRow> rows = readModel.listQuestions(courseId, page);
+            Map<Long, UserSummary> authors = identity.findUsers(
+                    rows.items().stream().map(QuestionRow::authorId).collect(Collectors.toSet()));
+            PageResult<QuestionSummaryView> view = rows.map(row -> new QuestionSummaryView(
+                    row.id(),
+                    row.title(),
+                    renderer.toPlainText(row.body(), EXCERPT_LENGTH),
+                    row.tags(),
+                    row.courseId(),
+                    AuthorView.of(row.authorId(), authors.get(row.authorId())),
+                    row.score(),
+                    row.answerCount(),
+                    row.viewCount(),
+                    row.acceptedAnswerId() != null,
+                    row.createdAt()));
+            cache.put(courseId, page, view);
+            return view;
+        });
     }
 
     public QuestionDetailView detail(long questionId, Actor actorOrNull) {
-        // TODO(S2)：实现 QuestionQueryService.detail——参考领域单元测试与 arc42 文档中的业务规则
-        throw new UnsupportedOperationException("TODO(S2)：QuestionQueryService.detail 尚未实现");
+        QuestionRow question = readModel.findQuestion(questionId)
+                .orElseThrow(() -> new NotFoundException("QA-4001", "问题不存在或已被删除"));
+        viewCounter.increment(questionId);
+
+        List<AnswerRow> answers = readModel.findAnswers(questionId);
+        List<CommentRow> comments = readModel.findComments(questionId);
+        Set<Long> userIds = new HashSet<>();
+        userIds.add(question.authorId());
+        answers.forEach(a -> {
+            userIds.add(a.authorId());
+            if (a.endorsedBy() != null) {
+                userIds.add(a.endorsedBy());
+            }
+        });
+        comments.forEach(c -> userIds.add(c.authorId()));
+        Map<Long, UserSummary> users = identity.findUsers(userIds);
+
+        Map<String, Integer> myVotes = actorOrNull == null
+                ? Map.of()
+                : readModel.findMyVotes(actorOrNull.userId(), questionId,
+                        answers.stream().map(AnswerRow::id).toList());
+
+        CourseRefView course = question.courseId() == null
+                ? null
+                : identity.findCourse(question.courseId())
+                        .map(c -> new CourseRefView(c.id(), c.code(), c.name()))
+                        .orElse(null);
+
+        boolean manages = actorOrNull != null && identity.canManageCourse(actorOrNull.userId(), question.courseId());
+        boolean isAsker = actorOrNull != null && actorOrNull.is(question.authorId());
+        PermissionsView permissions = actorOrNull == null
+                ? PermissionsView.NONE
+                : new PermissionsView(isAsker || manages,
+                        manages || (isAsker && question.answerCount() == 0),
+                        (isAsker || manages) && question.acceptedAnswerId() == null,
+                        manages);
+
+        List<CommentView> questionComments = toCommentViews(comments, TargetType.QUESTION, questionId, users);
+        List<AnswerView> answerViews = answers.stream()
+                .map(row -> new AnswerView(
+                        row.id(),
+                        row.body(),
+                        renderer.toSafeHtml(row.body()),
+                        AuthorView.of(row.authorId(), users.get(row.authorId())),
+                        row.score(),
+                        question.acceptedAnswerId() != null && question.acceptedAnswerId() == row.id(),
+                        row.endorsedBy() == null ? null : AuthorView.of(row.endorsedBy(), users.get(row.endorsedBy())),
+                        myVotes.getOrDefault(voteKey(TargetType.ANSWER, row.id()), 0),
+                        actorOrNull != null && (actorOrNull.is(row.authorId()) || manages),
+                        row.createdAt(),
+                        row.updatedAt(),
+                        toCommentViews(comments, TargetType.ANSWER, row.id(), users)))
+                .toList();
+
+        return new QuestionDetailView(
+                question.id(),
+                question.title(),
+                question.body(),
+                renderer.toSafeHtml(question.body()),
+                question.tags(),
+                course,
+                AuthorView.of(question.authorId(), users.get(question.authorId())),
+                question.score(),
+                question.answerCount(),
+                question.viewCount(),
+                question.acceptedAnswerId(),
+                myVotes.getOrDefault(voteKey(TargetType.QUESTION, questionId), 0),
+                question.createdAt(),
+                question.updatedAt(),
+                permissions,
+                questionComments,
+                answerViews);
     }
 
     public List<TagView> popularTags(int limit) {
-        // TODO(S2)：实现 QuestionQueryService.popularTags——参考领域单元测试与 arc42 文档中的业务规则
-        throw new UnsupportedOperationException("TODO(S2)：QuestionQueryService.popularTags 尚未实现");
+        return readModel.popularTags(limit);
+    }
+
+    private static List<CommentView> toCommentViews(List<CommentRow> rows, TargetType type, long targetId,
+                                                    Map<Long, UserSummary> users) {
+        return rows.stream()
+                .filter(r -> type.name().equals(r.targetType()) && r.targetId() == targetId)
+                .map(r -> new CommentView(r.id(), AuthorView.of(r.authorId(), users.get(r.authorId())), r.parentId(),
+                        r.body(), r.createdAt()))
+                .toList();
+    }
+
+    private static String voteKey(TargetType type, long targetId) {
+        return type.name() + ":" + targetId;
     }
 }

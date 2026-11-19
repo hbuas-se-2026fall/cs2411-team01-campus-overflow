@@ -3,6 +3,7 @@ package com.campusoverflow.reputation.application;
 import com.campusoverflow.identity.api.IdentityApi;
 import com.campusoverflow.identity.api.UserSummary;
 import com.campusoverflow.reputation.api.event.ReputationChangedEvent;
+import com.campusoverflow.reputation.domain.ReputationAccount;
 import com.campusoverflow.reputation.domain.ReputationAccountRepository;
 import com.campusoverflow.shared.event.ProcessedEventStore;
 import java.time.Clock;
@@ -35,13 +36,38 @@ public class LeaderboardService {
     @EventListener
     @Transactional
     public void on(ReputationChangedEvent e) {
-        // TODO(S3)：实现 LeaderboardService.on——参考领域单元测试与 arc42 文档中的业务规则
-        throw new UnsupportedOperationException("TODO(S3)：LeaderboardService.on 尚未实现");
+        if (!processed.markProcessed(e.eventId(), "leaderboard")) {
+            return;
+        }
+        store.increment(e.userId(), e.delta(), e.occurredAt());
     }
 
     @Transactional(readOnly = true)
     public List<LeaderboardEntryView> top(LeaderboardPeriod period, int limit) {
-        // TODO(S3)：实现 LeaderboardService.top——参考领域单元测试与 arc42 文档中的业务规则
-        throw new UnsupportedOperationException("TODO(S3)：LeaderboardService.top 尚未实现");
+        if (period == LeaderboardPeriod.ALL) {
+            List<ReputationAccount> accountsTop = accounts.topByReputation(limit);
+            Map<Long, UserSummary> users = identity.findUsers(
+                    accountsTop.stream().map(ReputationAccount::userId).toList());
+            List<LeaderboardEntryView> view = new ArrayList<>(accountsTop.size());
+            for (int i = 0; i < accountsTop.size(); i++) {
+                ReputationAccount account = accountsTop.get(i);
+                view.add(entry(i + 1, account.userId(), account.reputation(), users));
+            }
+            return view;
+        }
+        List<LeaderboardStore.Entry> stored = store.top(period, clock.instant(), limit);
+        Map<Long, UserSummary> users = identity.findUsers(stored.stream().map(LeaderboardStore.Entry::userId).toList());
+        List<LeaderboardEntryView> view = new ArrayList<>(stored.size());
+        for (int i = 0; i < stored.size(); i++) {
+            LeaderboardStore.Entry entry = stored.get(i);
+            view.add(entry(i + 1, entry.userId(), entry.score(), users));
+        }
+        return view;
+    }
+
+    private static LeaderboardEntryView entry(int rank, long userId, long score, Map<Long, UserSummary> users) {
+        UserSummary summary = users.get(userId);
+        return new LeaderboardEntryView(rank, userId, summary == null ? "已注销用户" : summary.displayName(),
+                summary != null && summary.verified(), score);
     }
 }
