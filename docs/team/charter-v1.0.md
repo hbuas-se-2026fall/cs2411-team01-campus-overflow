@@ -7,9 +7,9 @@
 | 角色 | 姓名 | GitHub 账号 | 职责 |
 |---|---|---|---|
 | PO（产品负责人） | 张宇航 | @futureel | 需求、Backlog 优先级、验收标准、Review 演示、用户访谈 |
-| SM（Scrum Master） | 陈洲 | 待填 | 流程、站会、看板、分支保护、CI 救火、PR 合并 |
-| Developer（后端核心） | 袁有为 | 待填 | Q&A 模块（S2 核心）、领域层、应用层 |
-| Developer / QA（前端+测试） | 彭天赐 | 待填 | Discovery 模块、前端页面、测试覆盖率、质量门禁 |
+| SM（Scrum Master） | 陈洲 | @caozeiC | 流程、站会、看板、分支保护、CI 救火、PR 合并 |
+| Developer（后端核心） | 袁有为 | @NIANQING18 | Q&A 模块（S2 核心）、领域层、应用层 |
+| Developer / QA（前端+测试） | 彭天赐 | @hhaha543 | Discovery 模块、前端页面、测试覆盖率、质量门禁 |
 
 ## 2. 团队价值观
 
