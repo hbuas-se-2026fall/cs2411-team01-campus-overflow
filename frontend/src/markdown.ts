@@ -81,7 +81,11 @@ export function renderMarkdown(source: string): string {
       } else {
         flushAll();
         inCode = true;
-        codeLang = line.slice(3).trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        codeLang = line
+          .slice(3)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '');
       }
       continue;
     }

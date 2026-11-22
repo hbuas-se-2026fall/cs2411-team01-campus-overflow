@@ -41,7 +41,9 @@ export function BountyDialog({ title = '发起悬赏', initial, onCancel, onConf
           有效期
           <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
             {[1, 3, 7, 14, 30].map((d) => (
-              <option key={d} value={d}>{d} 天</option>
+              <option key={d} value={d}>
+                {d} 天
+              </option>
             ))}
           </select>
         </label>
@@ -51,8 +53,15 @@ export function BountyDialog({ title = '发起悬赏', initial, onCancel, onConf
         </p>
 
         <div className="modal-actions">
-          <button type="button" onClick={onCancel}>取消</button>
-          <button type="button" className="primary" disabled={!valid} onClick={() => onConfirm({ points, days })}>
+          <button type="button" onClick={onCancel}>
+            取消
+          </button>
+          <button
+            type="button"
+            className="primary"
+            disabled={!valid}
+            onClick={() => onConfirm({ points, days })}
+          >
             确认悬赏 {points} 分
           </button>
         </div>
