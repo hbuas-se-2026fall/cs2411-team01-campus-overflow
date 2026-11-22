@@ -71,7 +71,7 @@ services:
     image: ${WEB_IMAGE:-campus-overflow-web:${APP_VERSION:-latest}}
     container_name: co-web
     depends_on:
-      backend: { condition: service_started }
+      backend: { condition: service_healthy }
     ports: ["80:80"]
 
   prometheus:
