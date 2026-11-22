@@ -12,7 +12,7 @@
 | Dismiss stale pull request approvals | 启用（推新提交后旧批准失效） | 防止批准与最终代码不一致 |
 | Require status checks to pass before merging | 启用 | CI 全绿才能合并 |
 | Require branches to be up to date | 启用（strict 模式） | 合并前必须与 main 同步 |
-| Required status checks | `后端构建与验证`、`前端构建`、`容器镜像构建` | 对应 ci.yml 的三个 job |
+| Required status checks | `后端构建与验证`、`前端构建` | 仅勾选 PR 阶段必跑的两个 job；`容器镜像构建`/`部署到课程服务器` 仅在 push main 时触发，PR 阶段为 skipped，设为必需会阻塞 PR 合并，故不纳入 |
 | Include administrators | 启用 | 管理员/PO 同样受约束，无例外 |
 | Allow force pushes | 禁用 | 禁止强推覆盖历史 |
 | Allow deletions | 禁用 | 禁止删除 main |
@@ -32,7 +32,6 @@ gh api -X PUT repos/hbuas-se-2026fall/cs2411-team01-campus-overflow/branches/mai
   -f required_status_checks.strict=true \
   -f required_status_checks.contexts[]='后端构建与验证' \
   -f required_status_checks.contexts[]='前端构建' \
-  -f required_status_checks.contexts[]='容器镜像构建' \
   -F enforce_admins=true \
   -f required_pull_request_reviews.required_approving_review_count=1 \
   -F required_pull_request_reviews.dismiss_stale_reviews=true \
@@ -60,5 +59,10 @@ git push origin main
 
 ## 5. 核对结论
 
-配置项已按第 1 节定义；实际写入仓库需陈洲账号具备 admin 权限（或由 PO @futureel 执行第 2 节命令）。
-执行后用第 3 节命令留存返回 JSON 作为配置证据。
+- 2026-11-22 已由 SM 陈洲（admin）经 REST API `PUT /branches/main/protection` 写入 main 保护规则，并回读校验通过：
+  - `enforce_admins = true`（管理员同样受约束）
+  - `required_approving_review_count = 1`，`dismiss_stale_reviews = true`
+  - `required_status_checks.strict = true`，contexts = `后端构建与验证`、`前端构建`
+  - `allow_force_pushes = false`，`allow_deletions = false`，未额外限制推送身份
+- 证据：再次执行第 3 节的 GET 命令可返回上述 JSON；直推 main 将被 GH006 拒绝。
+- 备注：镜像构建与自动部署 job 仅在 push 到 main 时运行，PR 阶段 skipped，因此未纳入必需状态检查。
