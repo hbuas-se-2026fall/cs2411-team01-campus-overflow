@@ -31,7 +31,10 @@ export function useNotificationStream(me: Me | null) {
     let disposed = false;
 
     const refreshUnread = () => {
-      api.unreadCount().then((r) => setUnread(r.count)).catch(() => undefined);
+      api
+        .unreadCount()
+        .then((r) => setUnread(r.count))
+        .catch(() => undefined);
     };
 
     const pushToast = (title: string, link: string) => {
@@ -65,7 +68,11 @@ export function useNotificationStream(me: Me | null) {
       const onNotification = (event: Event) => {
         const payload = event as MessageEvent<string>;
         try {
-          const data = JSON.parse(payload.data) as { title?: string; link?: string; read?: boolean };
+          const data = JSON.parse(payload.data) as {
+            title?: string;
+            link?: string;
+            read?: boolean;
+          };
           if (data.title) {
             pushToast(data.title, data.link ?? '/notifications');
           }

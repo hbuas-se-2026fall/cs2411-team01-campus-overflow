@@ -53,7 +53,9 @@ export function AskPage() {
         <h1>问题已发布</h1>
         {published.warning && <p className="error">{published.warning}</p>}
         <div className="actions">
-          <Link className="primary" to={`/questions/${published.id}`}>去看我的问题</Link>
+          <Link className="primary" to={`/questions/${published.id}`}>
+            去看我的问题
+          </Link>
           <Link to="/">返回列表</Link>
         </div>
       </div>
@@ -63,7 +65,8 @@ export function AskPage() {
   return (
     <div className="form-page">
       <h1>提出一个问题</h1>
-      <label>标题（10–150 字，尽量具体）
+      <label>
+        标题（10–150 字，尽量具体）
         <input value={title} onChange={(e) => setTitle(e.target.value)} />
       </label>
 
@@ -72,25 +75,44 @@ export function AskPage() {
         value={body}
         onChange={setBody}
         rows={12}
-        placeholder={'支持 Markdown：\n**加粗**、`行内代码`、```代码块```、- 列表、[链接](https://example.com)'}
+        placeholder={
+          '支持 Markdown：\n**加粗**、`行内代码`、```代码块```、- 列表、[链接](https://example.com)'
+        }
       />
 
-      <label>标签（1–5 个，用空格或逗号分隔）
-        <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="数据结构 红黑树" />
+      <label>
+        标签（1–5 个，用空格或逗号分隔）
+        <input
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="数据结构 红黑树"
+        />
       </label>
-      <label>所属课程（可选）
+      <label>
+        所属课程（可选）
         <select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
           <option value="">不关联课程</option>
-          {me?.courses.map((c) => <option key={c.id} value={c.id}>{c.code} {c.name}</option>)}
+          {me?.courses.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.code} {c.name}
+            </option>
+          ))}
         </select>
       </label>
 
       <div className="bounty-row">
-        {bounty
-          ? <span>已设置悬赏 <b>{bounty.points}</b> 分 · {bounty.days} 天
-              <button type="button" className="link" onClick={() => setBounty(null)}>取消悬赏</button>
-            </span>
-          : <button type="button" onClick={() => setBountyOpen(true)}>+ 添加悬赏（吸引更多回答）</button>}
+        {bounty ? (
+          <span>
+            已设置悬赏 <b>{bounty.points}</b> 分 · {bounty.days} 天
+            <button type="button" className="link" onClick={() => setBounty(null)}>
+              取消悬赏
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setBountyOpen(true)}>
+            + 添加悬赏（吸引更多回答）
+          </button>
+        )}
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -102,7 +124,10 @@ export function AskPage() {
         <BountyDialog
           initial={bounty ?? undefined}
           onCancel={() => setBountyOpen(false)}
-          onConfirm={(value) => { setBounty(value); setBountyOpen(false); }}
+          onConfirm={(value) => {
+            setBounty(value);
+            setBountyOpen(false);
+          }}
         />
       )}
     </div>
