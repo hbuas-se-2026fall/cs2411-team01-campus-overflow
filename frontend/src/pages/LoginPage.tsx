@@ -8,7 +8,12 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [form, setForm] = useState({
-    username: '', password: '', displayName: '', email: '', college: '', className: '',
+    username: '',
+    password: '',
+    displayName: '',
+    email: '',
+    college: '',
+    className: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,20 +40,66 @@ export function LoginPage() {
   return (
     <div className="form-page narrow">
       <div className="tabs">
-        <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>登录</button>
-        <button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>注册</button>
+        <button
+          type="button"
+          className={mode === 'login' ? 'active' : ''}
+          onClick={() => setMode('login')}
+        >
+          登录
+        </button>
+        <button
+          type="button"
+          className={mode === 'register' ? 'active' : ''}
+          onClick={() => setMode('register')}
+        >
+          注册
+        </button>
       </div>
       {/* 用 form 包住，回车可提交、浏览器密码管理器也能识别 */}
-      <form className="login-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <label>学号 / 工号<input value={form.username} onChange={set('username')} autoComplete="username" required /></label>
-        <label>密码<input type="password" value={form.password} onChange={set('password')}
-                       autoComplete={mode === 'register' ? 'new-password' : 'current-password'} required /></label>
+      <form
+        className="login-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <label>
+          学号 / 工号
+          <input
+            value={form.username}
+            onChange={set('username')}
+            autoComplete="username"
+            required
+          />
+        </label>
+        <label>
+          密码
+          <input
+            type="password"
+            value={form.password}
+            onChange={set('password')}
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+            required
+          />
+        </label>
         {mode === 'register' && (
           <>
-            <label>昵称<input value={form.displayName} onChange={set('displayName')} /></label>
-            <label>校园邮箱<input value={form.email} onChange={set('email')} /></label>
-            <label>学院<input value={form.college} onChange={set('college')} /></label>
-            <label>班级<input value={form.className} onChange={set('className')} /></label>
+            <label>
+              昵称
+              <input value={form.displayName} onChange={set('displayName')} />
+            </label>
+            <label>
+              校园邮箱
+              <input value={form.email} onChange={set('email')} />
+            </label>
+            <label>
+              学院
+              <input value={form.college} onChange={set('college')} />
+            </label>
+            <label>
+              班级
+              <input value={form.className} onChange={set('className')} />
+            </label>
           </>
         )}
         {error && <p className="error">{error}</p>}
