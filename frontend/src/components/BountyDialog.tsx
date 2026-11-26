@@ -11,7 +11,7 @@ type Props = {
 
 const MIN_POINTS = 10;
 const MAX_POINTS = 500;
-const MAX_DAYS = 30;
+const MAX_DAYS = 14;
 
 /** 悬赏弹窗：替代原来的 window.prompt，避免手机端被系统弹窗打断、也无法校验范围。 */
 export function BountyDialog({ title = '发起悬赏', initial, onCancel, onConfirm }: Props) {
@@ -40,7 +40,7 @@ export function BountyDialog({ title = '发起悬赏', initial, onCancel, onConf
         <label>
           有效期
           <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
-            {[1, 3, 7, 14, 30].map((d) => (
+            {[1, 3, 7, 14].map((d) => (
               <option key={d} value={d}>{d} 天</option>
             ))}
           </select>
