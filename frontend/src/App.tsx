@@ -17,11 +17,17 @@ function Header() {
   return (
     <>
       <header className="topbar">
-        <Link className="brand" to="/">CampusOverflow</Link>
+        <Link className="brand" to="/">
+          CampusOverflow
+        </Link>
         <nav>
           <Link to="/">问题</Link>
           <Link to="/leaderboard">排行榜</Link>
-          {me && <Link to="/notifications">通知{unread > 0 && <span className="badge">{unread}</span>}</Link>}
+          {me && (
+            <Link to="/notifications">
+              通知{unread > 0 && <span className="badge">{unread}</span>}
+            </Link>
+          )}
         </nav>
         <div className="spacer" />
         {me ? (
@@ -31,7 +37,9 @@ function Header() {
             <button onClick={() => logout().then(() => navigate('/'))}>退出</button>
           </div>
         ) : (
-          <Link className="primary" to="/login">登录 / 注册</Link>
+          <Link className="primary" to="/login">
+            登录 / 注册
+          </Link>
         )}
       </header>
       <Toasts items={toasts} onDismiss={dismiss} />
@@ -54,10 +62,24 @@ export function App() {
           <Routes>
             <Route path="/" element={<QuestionListPage />} />
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
-            <Route path="/ask" element={<RequireAuth><AskPage /></RequireAuth>} />
+            <Route
+              path="/ask"
+              element={
+                <RequireAuth>
+                  <AskPage />
+                </RequireAuth>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
-            <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+            <Route
+              path="/notifications"
+              element={
+                <RequireAuth>
+                  <NotificationsPage />
+                </RequireAuth>
+              }
+            />
           </Routes>
         </main>
       </AuthProvider>

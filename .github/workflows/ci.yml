@@ -1,5 +1,15 @@
-# CampusOverflow 持续集成流水线（对应 arc42 第 10 章适应度函数与第 7 章部署视图）
+# CampusOverflow CI/CD 流水线
+# 链路：push/PR → 后端测试(+Checkstyle/Sonar) → 前端 lint/格式/构建 → 构建并推送 GHCR 镜像 → 条件化 SSH 自动部署
 name: CI
+
+# 可选 Secrets：
+#   SONAR_TOKEN                SonarCloud 令牌，未配置则跳过扫描
+#   SSH_HOST/SSH_USER/SSH_KEY  课程服务器 SSH 部署凭证，未配置则跳过自动部署
+#   DEPLOY_PATH(Repository Variable) 服务器上仓库/部署目录，默认 /opt/campus-overflow
+env:
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/campus-overflow-backend
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/campus-overflow-web
 
 on:
   push:
@@ -21,6 +31,11 @@ jobs:
           distribution: temurin
           cache: maven
 
+      # 阶段 0：Checkstyle 静态检查（绑定 validate 阶段，零违规才继续）
+      - name: Checkstyle 静态检查
+        working-directory: backend
+        run: mvn -B validate
+
       # 阶段 1：编译（模块依赖不成环由 Maven 保证）
       - name: 编译
         working-directory: backend
@@ -36,7 +51,7 @@ jobs:
         working-directory: backend
         run: mvn -B test -pl co-bootstrap -am -Dtest=ArchitectureTest -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false
 
-      # 阶段 4：领域层覆盖率门禁（低于阈值直接失败）
+      # 阶段 4：领域层覆盖率门禁（低于阈值直接失败，同时生成 JaCoCo 报告供 Sonar 读取）
       - name: 覆盖率门禁
         working-directory: backend
         run: mvn -B verify -DskipITs -Djacoco.skip=false
@@ -53,6 +68,12 @@ jobs:
       - name: 集成测试
         working-directory: backend
         run: mvn -B verify -Dsurefire.skip=true
+
+      # SonarCloud 代码质量扫描：仅在配置了 SONAR_TOKEN 时执行，质量门禁见 SonarCloud 配置
+      - name: SonarCloud 静态扫描
+        if: env.SONAR_TOKEN != ''
+        working-directory: backend
+        run: mvn -B sonar:sonar
 
       - name: 归档测试报告
         if: always()
@@ -72,24 +93,103 @@ jobs:
       - name: 安装依赖
         working-directory: frontend
         run: npm install --no-audit --no-fund
+      - name: 代码规范检查（ESLint）
+        working-directory: frontend
+        run: npm run lint
+      - name: 格式检查（Prettier）
+        working-directory: frontend
+        run: npm run format:check
       - name: 类型检查
         working-directory: frontend
         run: npm run typecheck
-      - name: 代码规范检查
-        working-directory: frontend
-        run: npm run lint
       - name: 构建
         working-directory: frontend
         run: npm run build
 
-  images:
-    name: 容器镜像构建
+  docker:
+    name: 构建并推送镜像（GHCR）
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: 构建后端镜像
-        run: docker build -f deploy/backend.Dockerfile -t campus-overflow-backend:${{ github.sha }} .
-      - name: 构建前端镜像
-        run: docker build -f deploy/frontend.Dockerfile -t campus-overflow-web:${{ github.sha }} .
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建并推送后端镜像
+        run: |
+          docker build -f deploy/backend.Dockerfile -t "$IMAGE_BACKEND:${{ github.sha }}" -t "$IMAGE_BACKEND:latest" .
+          docker push "$IMAGE_BACKEND:${{ github.sha }}"
+          docker push "$IMAGE_BACKEND:latest"
+
+      - name: 构建并推送前端镜像
+        run: |
+          docker build -f deploy/frontend.Dockerfile -t "$IMAGE_WEB:${{ github.sha }}" -t "$IMAGE_WEB:latest" .
+          docker push "$IMAGE_WEB:${{ github.sha }}"
+          docker push "$IMAGE_WEB:latest"
+
+  deploy:
+    name: 部署到课程服务器
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 检查 SSH 凭证
+        id: check
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          if [ -z "$SSH_HOST" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "未配置 SSH 凭证，跳过自动部署（镜像已推送 GHCR，可手动部署）"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 通过 SSH 部署
+        if: steps.check.outputs.skip == 'false'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: IMAGE_BACKEND,IMAGE_WEB,github.sha
+          script: |
+            set -e
+            APP_DIR=${{ vars.DEPLOY_PATH || '/opt/campus-overflow' }}
+            cd "$APP_DIR"
+            echo "${github.sha}" > VERSION
+            # 让 compose 用 GHCR 上的指定版本镜像而非本地构建
+            export BACKEND_IMAGE="$IMAGE_BACKEND:${github.sha}"
+            export WEB_IMAGE="$IMAGE_WEB:${github.sha}"
+            docker compose -f deploy/docker-compose.yml pull
+            docker compose -f deploy/docker-compose.yml up -d --remove-orphans
+            docker image prune -f
+
+      - name: 部署后健康冒烟检查
+        if: steps.check.outputs.skip == 'false'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            # 等待后端就绪，最多 60 秒；失败则提示按运维手册回滚
+            for i in $(seq 1 12); do
+              if wget -qO- http://localhost:8080/actuator/health/readiness | grep -q '"status":"UP"'; then
+                echo "backend healthy"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "后端健康检查未通过，需人工介入回滚（见 docs/ops/runbook-v1.0.md）"
+            exit 1
