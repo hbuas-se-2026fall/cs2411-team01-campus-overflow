@@ -1,0 +1,26 @@
+# Git 与 CI 元数据（不进镜像构建上下文）
+.git
+.github
+.gitignore
+.dockerignore
+
+# 后端 Maven 构建产物（容器内重新打包，避免把本机 target 拷进镜像）
+**/target
+
+# 前端依赖与构建产物（容器内 npm install / build，避免拷入平台相关的 node_modules）
+**/node_modules
+frontend/dist
+
+# 环境变量与日志
+.env
+*.log
+
+# IDE / 系统文件
+.idea
+.vscode
+*.iml
+.DS_Store
+
+# 本地文档与临时产物（镜像不需要）
+docs
+*.tsbuildinfo
